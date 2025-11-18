@@ -429,14 +429,11 @@ if(DigestCheck(bytes12,1)){
 ### A Smart Contract-Based Adaptive Security Architecture for Collaborative Smart City Services  
 **PeerJ Computer Science, 2025** | **Smart Agriculture Use Case**
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Paper](https://img.shields.io/badge/Paper-PeerJ_CS_2025-blue)](https://peerj.com/articles/cs-XXXX/) 
 [![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue)](https://www.python.org/downloads/)
 [![Contiki-NG](https://img.shields.io/badge/Contiki--NG-Latest-green)](https://github.com/contiki-ng/contiki-ng)
 [![MultiChain](https://img.shields.io/badge/MultiChain-Blockchain-orange)](https://www.multichain.com/)
 
 > **Real-time risk-aware ECC tier escalation (128 → 192 → 256-bit)**  
-> **Blockchain-enforced policy**: Automatically delay fertilization if rain > 30 mm  
 > **Location**: Karachi, Pakistan | **Date**: November 2025
 
 ---
@@ -485,31 +482,3 @@ This repository implements a **context-aware, trust-based adaptive security gove
 | ECC Tier Escalation|
 | 128 → 192 → 256    |
 +--------------------+
-### 🔑 Adaptive ECC Key Tiers
-
-### 🔑 Adaptive ECC Key Tiers
-
-| Risk Level | ECC Curve | Use Case | |-----------------------|-----------|--------------------------------------------| | Low Risk | ECC-128 | Normal conditions | | Medium Risk | ECC-192 | Moderate environmental deviation | | High Risk / Low Trust | ECC-256 | Heavy rain, low trust, anomalies |
-
-### 📊 Trust & Risk Model (From Paper)
-
-| Component | Mathematical Formula | Key Parameters | |-----------------------|---------------------------------------------------------------------------------------------------------------|-----------------------------------------------------| | **Historical Trust** | $$T_{\text{Hist}}(t) = \frac{\sum \delta^{(t - t_j)/\Delta t} \cdot s_{t_j}}{\sum \delta^{(t - t_j)/\Delta t}}$$ | $$\delta = 0.9$$, $$\Delta t = 24\,\text{h}$$ | | **Reputation Trust** | $$T_{\text{Rept}}(t) = \frac{\sum c_j \cdot f_j}{\sum c_j}$$ | $$c_j$$ = peer credibility, $$f_j \in [0,1]$$ | | **Contextual Trust** | $$T_{\text{Ctx}}(t) = \min\!\left(0.7 \times (M_{\text{rain}}^{0.6} \times M_{\text{temp}}^{0.4}), 1\right)$$ | $$M_{\text{rain}} = 1 - \frac{\text{rain}}{50}$$ (if rain < 50 else 0)
-$$M_{\text{temp}} = 1 - \frac{|T-28|}{10}$$ (if \|T-28\| < 10 else 0) | | **Overall Trust** | $$T_{\text{Overall}} = w_1 T_{\text{Hist}} + w_2 T_{\text{Rept}} + w_3 T_{\text{Ctx}}$$ | Dynamic weights based on risk $$R$$ | | **Risk Score** | $$R = \frac{R_{\text{Env}} + R_{\text{Service}}}{2}$$ | $$R_{\text{Service}} = 1 - T_{\text{Hist}}$$ | | **Dynamic Weights** | $$\begin{aligned} w_1 &= 0.5 - 0.2R \\ w_2 &= 0.3 + 0.1R \\ w_3 &= 1 - w_1 - w_2 \end{aligned}$$ | Risk-adaptive weighting |
-
-### ⚙️ Enforcement Policies (Smart Contract Logic)
-
-| Condition | Action | |------------------------------------------------|------------------------------------------| | $$T_{\text{Overall}} < 0.5$$ | **DENY** command | | $$T_{\text{Overall}} < 0.7$$ OR $$R > 0.5$$ | Escalate to **ECC-256** | | $$|\Delta T_{\text{Overall}}| > 0.3$$ in 5 min | **REVOKE** session | | Rain Forecast **> 30 mm** | **DELAY** fertilization (enforced) |
-
-### 🚀 Quick Start (Tested on Ubuntu 22.04+)
-
-```bash # 1. Clone repository git clone https://github.com/Shahbazdefender/A-Smart-Contract-Based-Adaptive-Security-Governance-Architecture-for-Smart-City-Service.git cd A-Smart-Contract-Based-Adaptive-Security-Governance-Architecture-for-Smart-City-Service
-
-# 2. Start MultiChain Blockchain multichaind agri-chain -daemon
-
-# 3. Generate 183+ ECC Keys (61 per tier) bash generate_keys.sh
-
-# 4. Deploy Smart Policies python deploy_contracts.py
-
-# 5. Launch Cooja Simulation (Contiki-NG) make TARGET=cooja agriculture.csc
-
-# 6. Simulate High-Risk Scenario (Heavy Rain + High Temp) python simulate_rain.py --rain 45 --temp 39
