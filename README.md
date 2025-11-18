@@ -423,6 +423,35 @@ if(DigestCheck(bytes12,1)){
         }
     }
     
-    
 
 ```
+# Smart Agriculture — Context-Aware Trust & Adaptive Security Governance
+
+Repository: https://github.com/Shahbazdefender/A-Smart-Contract-Based-Adaptive-Security-Governance-Architecture-for-Smart-City-Service
+
+Paper: "Context-Aware Trust Governance for Adaptive Security in Collaborative Smart City Services" — PeerJ Computer Science, 2025
+
+Section: Smart Agriculture Use Case  
+Authors: Usama Antuley, Muhammad Afnan, Shahbaz Siddiqui, Sufian Hameed, Dirk Draheim, Syed Attique Shah  
+Date: November 16, 2025 — Karachi, Pakistan
+
+---
+
+## Overview
+
+This repository implements the Smart Agriculture use case:
+- IoT sensors (soil moisture, temperature, pH) simulated via Cooja/Contiki hooks.
+- Integration points for OpenWeather and SoilGrids (mocked).
+- Trust & risk engine (trust_engine.py) implementing the mathematical model.
+- Key-management: bulk ECC key generation script.
+- Policy enforcement via mocked MultiChain publish to streams (LocalRule, LocalPolicies, AuditLog).
+- ECC tier escalation and policy decisions (delay fertilizer when rain risk is high).
+
+---
+
+## Quickstart
+
+1. Clone the repo.
+2. Generate keys:
+   ```bash
+   bash scripts/generate_keys.sh       # default: generates 61 keys per ECC curve
