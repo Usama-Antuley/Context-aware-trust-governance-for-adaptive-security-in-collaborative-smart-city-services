@@ -455,3 +455,372 @@ This repository implements the Smart Agriculture use case:
 2. Generate keys:
    ```bash
    bash scripts/generate_keys.sh       # default: generates 61 keys per ECC curve
+
+Deploy policies (mock):
+
+python3 trust_engine/deploy_contracts.py
+
+
+Run a simulation:
+
+python3 trust_engine/simulate_rain.py --rain 35 --temp 38
+
+
+(Optional) Start Cooja with cooja/agriculture.csc if you have Contiki/Cooja set up.
+
+File map (important files)
+
+scripts/generate_keys.sh — key generation (ECC-128/192/256).
+
+trust_engine/trust_engine.py — main trust & risk engine.
+
+trust_engine/deploy_contracts.py — publish policies to MultiChain (mock).
+
+trust_engine/simulate_rain.py — scenario runner.
+
+cooja/AbstractMote.java — example Cooja mote integration snippet.
+
+blockchain/ServiceSecurity.json — sample service state.
+
+Contact
+
+Shahbaz Siddiqui — shahbazdefender@gmail.com
+
+
+---
+
+### 2) scripts/generate_keys.sh
+```bash
+#!/usr/bin/env bash
+# scripts/generate_keys.sh
+# Generate multiple ECC keypairs and SHA256 hashes per curve.
+# Usage: ./scripts/generate_keys.sh [NUM_KEYS]
+# Default NUM_KEYS = 61
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+BASE_DIR="${REPO_ROOT}/Keys"
+NUM_KEYS="${1:-61}"
+
+declare -A CURVES
+CURVES["ECC-128"]="prime128v1"
+CURVES["ECC-192"]="prime192v1"
+CURVES["ECC-256"]="prime256v1"
+
+echo "Generating ${NUM_KEYS} keys per curve under ${BASE_DIR} ..."
+
+for label in "${!CURVES[@]}"; do
+  curve="${CURVES[$label]}"
+  out="${BASE_DIR}/${label}"
+  mkdir -p "${out}"
+  echo " - ${label} (${curve}) -> ${out}"
+  for i in $(seq 1 "${NUM_KEYS}"); do
+    priv="${out}/private-key${i}.pem"
+    pub="${out}/public-key${i}.pem"
+    hash="${out}/hash${i}.sha256"
+
+    # generate private key
+    openssl ecparam -name "${curve}" -genkey -noout -out "${priv}"
+
+    # generate public key
+    openssl ec -in "${priv}" -pubout -out "${pub}"
+
+    # sha256 of the private key as a quick integrity/ref
+    openssl dgst -sha256 -binary "${priv}" | xxd -p -c 256 > "${hash}"
+
+    # secure perms on private key
+    chmod 600 "${priv}"
+    # progress dot
+    printf '.'
+  done
+  echo ""
+done
+
+echo "Key generation finished. Keys stored in ${BASE_DIR}"
+
+3) trust_engine/trust_engine.py
+#!/usr/bin/env python3
+# trust_engine/trust_engine.py
+"""
+Trust & Risk Engine for Smart Agriculture use-case.
+Implements the mathematical model from the paper.
+"""
+
+import time
+from typing import List, Tuple, Dict
+
+# Parameters
+DECAY = 0.9
+DELTA_T_HOURS = 24.0
+T_BASE = 0.7
+ALPHA_RAIN = 0.6
+ALPHA_TEMP = 0.4
+
+def hours_between(now_ts: float, ts: float) -> float:
+    return max(0.0, (now_ts - ts) / 3600.0)
+
+class TrustEngine:
+    def _init_(self, now_ts: float = None):
+        self.now_ts = now_ts or time.time()
+
+    def historical_trust(self, past_scores: List[Tuple[float, float]]) -> float:
+        num = 0.0
+        den = 0.0
+        for ts, s in past_scores:
+            h = hours_between(self.now_ts, ts)
+            weight = DECAY ** (h / DELTA_T_HOURS)
+            num += weight * s
+            den += weight
+        return num / den if den > 0 else 0.0
+
+    def reputation_trust(self, feedbacks: List[Tuple[float, float]]) -> float:
+        num = 0.0
+        den = 0.0
+        for c, f in feedbacks:
+            num += c * f
+            den += c
+        return num / den if den > 0 else 0.0
+
+    def contextual_trust(self, temp: float, rain_mm: float) -> float:
+        m_rain = max(0.0, 1 - (rain_mm / 50.0)) if rain_mm < 50 else 0.0
+        m_temp = max(0.0, 1 - (abs(temp - 28.0) / 10.0)) if abs(temp - 28.0) < 10 else 0.0
+        prod = (m_rain * ALPHA_RAIN) * (m_temp * ALPHA_TEMP)
+        return min(T_BASE * prod, 1.0)
+
+    def risk_environment(self, temp: float, rain_mm: float) -> float:
+        indicators = []
+        indicators.append(1 if abs(temp - 28.0) > 5.0 else 0)
+        indicators.append(1 if rain_mm > 20.0 else 0)
+        return sum(indicators) / len(indicators)
+
+    def risk_service(self, t_hist: float) -> float:
+        return 1.0 - t_hist
+
+    def overall_trust(self, t_hist: float, t_rept: float, t_ctx: float, R: float):
+        w1 = max(0.0, 0.5 - 0.2 * R)
+        w2 = max(0.0, 0.3 + 0.1 * R)
+        w3 = max(0.0, 1.0 - w1 - w2)
+        T = w1 * t_hist + w2 * t_rept + w3 * t_ctx
+        return T, (w1, w2, w3)
+
+def compute_trust_and_risk(
+    past_scores: List[Tuple[float, float]],
+    feedbacks: List[Tuple[float, float]],
+    temp: float,
+    rain_mm: float,
+    now_ts: float = None
+) -> Dict:
+    te = TrustEngine(now_ts)
+    t_hist = te.historical_trust(past_scores)
+    t_rept = te.reputation_trust(feedbacks)
+    t_ctx = te.contextual_trust(temp, rain_mm)
+
+    R_env = te.risk_environment(temp, rain_mm)
+    R_service = te.risk_service(t_hist)
+    R = (R_env + R_service) / 2.0
+
+    T_overall, weights = te.overall_trust(t_hist, t_rept, t_ctx, R)
+
+    # ECC-tier decision and DENY rule
+    if T_overall < 0.5:
+        ecc_tier = 'DENY'
+    elif T_overall < 0.7 or R > 0.5:
+        ecc_tier = 'ECC-256'
+    else:
+        ecc_tier = 'ECC-128'
+
+    return {
+        'T_hist': t_hist,
+        'T_rept': t_rept,
+        'T_ctx': t_ctx,
+        'T_overall': T_overall,
+        'weights': weights,
+        'R_env': R_env,
+        'R_service': R_service,
+        'R': R,
+        'ecc_tier': ecc_tier
+    }
+
+if _name_ == '_main_':
+    now = time.time()
+    past = [(now - 3600 * 24 * i, 0.8 - 0.01 * i) for i in range(1, 6)]
+    feedbacks = [(1.0, 0.9), (0.8, 0.7)]
+    res = compute_trust_and_risk(past, feedbacks, temp=31.0, rain_mm=5.0, now_ts=now)
+    import json
+    print(json.dumps(res, indent=2))
+
+4) trust_engine/deploy_contracts.py
+#!/usr/bin/env python3
+# trust_engine/deploy_contracts.py
+"""
+Mock deployer for policies (publishes to mocked MultiChain streams).
+Replace MultiChainClientMock with actual multichain library / RPC for production.
+"""
+
+import time
+import json
+from pathlib import Path
+
+SERVICE_POLICY = {
+    "rule": "if rain > 30: delay_fertilizer = true",
+    "ecc_tier": "256 if T_Overall < 0.7 else 128"
+}
+
+class MultiChainClientMock:
+    def _init_(self):
+        self.streams = {}
+
+    def publish(self, stream: str, key: str, value: dict):
+        self.streams.setdefault(stream, []).append({
+            'time': time.strftime('%Y-%m-%d %H:%M:%S'),
+            'key': key,
+            'value': value
+        })
+        print(f"Published to stream '{stream}' key='{key}'")
+
+    def dump(self, path: Path):
+        path.write_text(json.dumps(self.streams, indent=2))
+        print(f"Mock streams dumped to {path}")
+
+if _name_ == '_main_':
+    mc = MultiChainClientMock()
+    mc.publish('LocalPolicies', 'agri_policy', {'json': SERVICE_POLICY})
+    mc.publish('LocalRule', 'service_threshold', {'json': {
+        'Serviceid': 'AgricultureService',
+        'Servicerthreshould': 0.7,
+        'Time': time.strftime('%Y-%m-%d %H:%M:%S')
+    }})
+    mc.publish('AuditLog', 'init', {'json': {'note': 'policy deployed'}})
+
+    # dump to file for inspection
+    out = Path(_file_).resolve().parent.parent / 'blockchain' / 'mock_streams.json'
+    out.parent.mkdir(parents=True, exist_ok=True)
+    mc.dump(out)
+
+5) trust_engine/simulate_rain.py
+#!/usr/bin/env python3
+# trust_engine/simulate_rain.py
+"""
+Small simulator that uses trust_engine to compute decisions for given rain/temp.
+"""
+
+import argparse
+import time
+import json
+from trust_engine import compute_trust_and_risk
+
+def main():
+    p = argparse.ArgumentParser()
+    p.add_argument('--rain', type=float, default=0.0, help='rain mm')
+    p.add_argument('--temp', type=float, default=28.0, help='temperature Celsius')
+    args = p.parse_args()
+
+    now = time.time()
+    # sample past trust scores (timestamp, score)
+    past = [(now - 3600 * 24 * i, 0.8) for i in range(1, 6)]
+    feedbacks = [(1.0, 0.8), (0.8, 0.75)]
+
+    res = compute_trust_and_risk(past, feedbacks, temp=args.temp, rain_mm=args.rain, now_ts=now)
+    print(json.dumps(res, indent=2))
+
+    # enforcement example
+    if args.rain > 30:
+        print('POLICY ACTION: delay_fertilizer = true')
+    if res['T_overall'] == 'DENY' or res['ecc_tier'] == 'DENY':
+        print('POLICY ACTION: deny access (block command)')
+    else:
+        print(f"Selected ECC Tier: {res['ecc_tier']}")
+
+if _name_ == '_main_':
+    main()
+
+6) cooja/AbstractMote.java
+// cooja/AbstractMote.java
+// Example snippet to show integration points for Cooja (pseudo-code).
+
+public class AbstractMote {
+    // placeholder functions that would connect to real APIs or local trust engine
+    public static double getTemperature(double lat, double lon) { return 31.0; }
+    public static double getRainForecast(double lat, double lon) { return 5.0; }
+    public static double getPH(double lat, double lon) { return 7.1; }
+
+    public void rxData(DataPacket packet) {
+        double lat = 24.8607, lon = 67.0011;
+        double temp = getTemperature(lat, lon);
+        double rain = getRainForecast(lat, lon);
+        double pH = getPH(lat, lon);
+
+        double R_env = 0.0;
+        if (Math.abs(temp - 28.0) > 5.0) R_env += 1.0;
+        if (rain > 20.0) R_env += 1.0;
+        R_env /= 2.0;
+
+        double T_Overall = TrustEngineWrapper.compute(lat, lon, temp, rain, pH);
+
+        if (T_Overall < 0.5) {
+            rejectCommand();
+        } else if (T_Overall < 0.7 || R_env > 0.5) {
+            useECC256();
+        } else {
+            useECC128();
+        }
+
+        MultiChainUtils.publishTrust(T_Overall, R_env, getECCTier());
+    }
+
+    // stub methods
+    void rejectCommand() { /* drop / block */ }
+    void useECC256() { /* set ECC-256 */ }
+    void useECC128() { /* set ECC-128 */ }
+    String getECCTier() { return "ECC-128"; }
+}
+
+7) blockchain/ServiceSecurity.json
+{
+  "Serviceid": "AgricultureService",
+  "Contract": "Local",
+  "Servicerthreshould": 0.7,
+  "ServiceTrust": 0.78,
+  "PreviousTrust": 0.80,
+  "CollaborativeServiceCTrust": 0.65,
+  "Time": "2025-11-16 12:00:00"
+}
+
+8) .gitignore
+# Keys and sensitive data
+Keys/
+_pycache_/
+*.pyc
+*.log
+.env
+.blockchain/
+blockchain/mock_streams.json
+
+9) LICENSE (MIT)
+MIT License
+
+Copyright (c) 2025 Shahbaz Siddiqui
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction...
+
+10) scripts/run_all.sh (helper)
+#!/usr/bin/env bash
+# scripts/run_all.sh
+# convenience script to run keygen, deploy, simulate
+
+set -euo pipefail
+
+echo "1) Generating keys (small, 3 per curve for quick test)..."
+bash "$(dirname "$0")/generate_keys.sh" 3
+
+echo "2) Deploying policies (mock)..."
+python3 ../trust_engine/deploy_contracts.py
+
+echo "3) Simulating rain (35 mm, 38C)..."
+python3 ../trust_engine/simulate_rain.py --rain 35 --temp 38
+
+echo "Done."
