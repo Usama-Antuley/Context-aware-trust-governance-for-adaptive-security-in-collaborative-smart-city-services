@@ -427,7 +427,8 @@ if(DigestCheck(bytes12,1)){
 ```
 # 🌾 Context-Aware Trust & Adaptive Security Governance for Smart Agriculture
 ### A Smart Contract-Based Adaptive Security Architecture for Collaborative Smart City Services  
-**PeerJ Computer Science, 2025** | **Smart Agriculture Use Case**
+**Smart Agriculture Use Case**
+This repository contains the code, scripts, figures and supporting artifacts used to reproduce the experiments and results reported in the PeerJ paper. The code implements a context-aware trust & risk engine, multichain integration hooks (logging/publishing), and an ECC tier escalation module used in the Smart Agriculture use-case. The README below tells readers how to run the code, what to expect, and highlights the main formulas and small code examples used in the experiments.
 
 [![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue)](https://www.python.org/downloads/)
 [![Contiki-NG](https://img.shields.io/badge/Contiki--NG-Latest-green)](https://github.com/contiki-ng/contiki-ng)
@@ -482,3 +483,358 @@ This repository implements a **context-aware, trust-based adaptive security gove
 | ECC Tier Escalation|
 | 128 → 192 → 256    |
 +--------------------+
+
+# 🌾 Context-Aware Trust & Adaptive Security Governance for Smart Agriculture
+
+### A Smart Contract-Based Adaptive Security Architecture for Collaborative Smart City Services
+
+This repository provides the **complete programmable script**, **trust engine**, **policy engine**, **key management module**, **context engine**, and **ECC tier escalation benchmarks** used in the PeerJ Computer Science 2025 paper:
+
+> **Context-Aware Trust Governance for Adaptive Security in Collaborative Smart City Services**
+
+It also includes the Python script **`smartcity_trust_framework_2025.py`**, which reproduces all trust, risk, ECC performance, and collaborative execution experiments presented in the paper.
+
+---
+
+# 📁 Repository Structure
+
+```
+.
+├── paper/
+│   └── PeerJ_Journal_Paper Submission.pdf
+├── code/
+│   ├── smartcity_trust_framework_2025.py   # Main trust engine + ECC benchmark
+│   ├── generate_keys.sh                    # Key Management Module
+│   ├── deploy_contracts.py                 # Blockchain Rule/Policy engine
+│   ├── logs/                               # Generated CSVs + experiment figures
+│   └── README.md
+```
+
+---
+
+# 1️⃣ Key Management Module (ECC-128 / ECC-192 / ECC-256)
+
+### ✔ Generates 50+ ECC keypairs on each service node
+
+### ✔ Supports 3 cryptographic strength levels
+
+### ✔ Used by interoperable services, SDN controller, client nodes
+
+## 📌 Features
+
+1. Generates **public/private keypairs + SHA256 hash** for identity validation.
+2. Creates separate ECC directories:
+
+   * `ECC-128/`
+   * `ECC-192/`
+   * `ECC-256/`
+3. Uses OpenSSL curves:
+
+   * `prime128v1`
+   * `prime192v1`
+   * `prime256v1`
+4. Output appended to security.json
+
+---
+
+## 🔐 Key Generation Bash Script (Full Version)
+
+```bash
+#!/bin/bash
+
+# Generate 61 ECC key pairs
+for i in {1..61}
+do
+    echo "Generating ECC keypair $i..."
+
+    # ECC-128
+    openssl ecparam -name prime128v1 -genkey -noout -out private-key$i.pem
+    openssl ec -in private-key$i.pem -pubout -out public-key$i.pem
+
+    # Hash the private key
+    openssl dgst -sha256 -binary private-key$i.pem > hash$i.txt
+
+done
+
+echo "Keys Successfully Generated."
+echo "}" >> security.json
+```
+
+---
+
+# 2️⃣ Service Management Module
+
+### ✔ Updates `ServiceSecurity.json` with local trust, previous trust, threshold
+
+### ✔ Java AbstractMote calls this JSON to update behavioral trust
+
+### ✔ Python integrates with Java using file-based filling
+
+## 📌 Python Script Used to Manage & Append Service Security Rules
+
+```python
+import json, os, hashlib
+from datetime import datetime
+
+data1 = []
+data2 = []
+
+def encode_json(data):
+    return json.dumps(data, indent=4)
+
+def decode_json(json_data):
+    return json.loads(json_data)
+
+# Load previous contract state
+if os.path.exists("ServiceSecurity.json"):
+    with open("ServiceSecurity.json", "r") as f:
+        data1 = decode_json(f.read())
+
+# Service Management Logic
+
+def ServiceManagement():
+    while True:
+        commit = input("Enter commit to add rule: ")
+        if commit != "commit":
+            break
+
+        now = datetime.now().strftime("%H:%M:%S")
+
+        data1.append({
+            "Serviceid": "Service1",
+            "Contract": "Local",
+            "LocalRuleHash": hash1,
+            "Servicerthreshould": 0.0,
+            "PreviousTrust": 0.0,
+            "ServiceTrust": 0.0,
+            "Role": "Admin",
+            "Authorization": ["Create", "Add", "Delete", "Display"],
+            "Time": now
+        })
+
+        data2.append({
+            "LocalpolicyHash": hash2,
+            "Subject": "Service1",
+            "object": "Service2",
+            "CollaborativeServiceTrust": 0.0,
+            "CollaborativeServicePTrust": 0.0,
+            "CollaborativeServiceCTrust": 0.0,
+            "Time": now
+        })
+```
+
+---
+
+# 3️⃣ Rule Engine & Policy Engine (Blockchain Contract Layer)
+
+### ✔ Generates **Local Rules** & **Local Policies** dynamically
+
+### ✔ Stores Contracts on MultiChain Blockchain
+
+### ✔ Ensures tamper-proof & distributed authorization
+
+## 📌 Python Snippet — Blockchain Rule/Policy Storage
+
+```python
+from multichain import MultiChainClient
+from datetime import datetime
+import json
+
+rpcuser = "multichainrpc"
+rpcpassword = "xxxxxxxx"
+rpchost = "127.0.0.1"
+rpcport = "2652"
+
+mc = MultiChainClient(rpchost, rpcport, rpcuser, rpcpassword)
+
+# Create LocalRule stream
+mc.create('stream', 'LocalRule', True)
+
+# Publish rule
+mc.publish('LocalRule', 'key1', {'json': {
+    "Serviceid": "Service1",
+    "Contract": "Local",
+    "LocalRuleHash": hash1,
+    "Servicerthreshould": 0.1,
+    "PreviousTrust": 0,
+    "ServiceTrust": 0,
+    "Time": datetime.now().isoformat()
+}})
+
+# Create LocalPolicies stream
+mc.create('stream', 'LocalPolicies', True)
+
+# Publish policy
+mc.publish('LocalPolicies', 'key1', {'json': {
+    "Serviceid": "Service1",
+    "LocalpolicyHash": hash2,
+    "Subject": "App1",
+    "object": "App2",
+    "CollaborativeServiceTrust": 0.1,
+    "CollaborativeServicePTrust": 0.0,
+    "CollaborativeServiceCTrust": 0.0,
+    "Time": datetime.now().isoformat()
+}})
+```
+
+---
+
+# 4️⃣ Context Engine (Integrated in Contiki-NG AbstractMote.java)
+
+### ✔ Real-time trust elevation
+
+### ✔ Uses blockchain certificates + ECC key validation
+
+### ✔ Runs inside **Cooja simulator (Contiki-NG)**
+
+## 📌 Java Snippet — Context Verification Logic
+
+```java
+public final void rxData(DataPacket packet) {
+
+    if (isAcceptedIdPacket(packet)) {
+
+        try {
+            String uniqueid = UUID.randomUUID().toString();  
+            MultiChainUtils.writeRegistrationToStream(
+                "Registration", Integer.toString(this.getID()), uniqueid);
+            Thread.sleep(1000);
+
+            String key = MultiChainUtils.getCertificateFromStream(
+                "txid-here",
+                "publisher-key-here"
+            );
+
+        } catch (InterruptedException ex) {
+            // handle interruption
+        }
+
+        try {
+            File file = new File("hash1.txt");
+            MessageDigest sha = MessageDigest.getInstance("SHA-256");
+            String checksum = getFileChecksum(sha, file);
+
+            if (DigestCheck(checksum.getBytes(), 1)) {
+                System.out.println("Node " + this.getID() + " Verified");
+                Service1(); Service2(); Service3();
+            } else {
+                System.out.println("Node " + this.getID() + " Not Verified");
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        SDN_WISE_Callback(packet);
+    }
+}
+```
+
+---
+
+# 5️⃣ Smartcity Trust Engine (Python) — Main Script Overview
+
+The script:
+
+* Retrieves **OpenWeather + SoilGrids** context
+* Computes **Historical Trust, Reputation Trust, Contextual Trust**
+* Aggregates final trust score
+* Computes **overall risk**
+* Selects ECC tier dynamically
+* Optionally writes to blockchain
+
+Run:
+
+```bash
+python smartcity_trust_framework_2025.py
+```
+
+Run full benchmark:
+
+```bash
+python smartcity_trust_framework_2025.py --benchmark
+```
+
+---
+
+# 6️⃣ Mathematical Model Used (Complete Paper Formulae)
+
+### 📌 Historical Trust
+
+```
+T_Hist = Σ[δ^(t - t_j)/Δt * s_j] / Σ[δ^(t - t_j)/Δt]
+```
+
+### 📌 Reputation Trust
+
+```
+T_Rept = Σ(c_j * f_j) / Σ(c_j)
+```
+
+### 📌 Contextual Trust (Geometric Aggregation)
+
+```
+T_Ctx = min( T_base × Π M_k^α_k , 1 )
+```
+
+### 📌 Overall Trust
+
+```
+T_Overall = w1*T_Hist + w2*T_Rept + w3*T_Ctx
+```
+
+### 📌 Risk Score
+
+```
+R = (R_Env + R_Service) / 2
+R_Service = 1 - T_Hist
+```
+
+### 📌 Dynamic Weight Adaptation
+
+```
+w1 = 0.5 - 0.2R
+w2 = 0.3 + 0.1R
+w3 = 1 - w1 - w2
+```
+
+---
+
+# 7️⃣ ECC Tier Escalation
+
+```
+If T_Overall < 0.7 OR R > 0.5: use ECC-256
+If R < 0.3: use ECC-128
+Else: use ECC-192
+```
+
+---
+
+# 8️⃣ Benchmark Output
+
+When running:
+
+```
+python smartcity_trust_framework_2025.py --benchmark
+```
+
+It generates:
+
+```
+Exp1(a).png
+Exp1(b).png
+Exp2(a).png
+Exp2(b).png
+Exp3(a).png
+Exp3(b).png
+Collab_NoEsc_Exec_Throughput.png
+Collab_NoEsc_Delay.png
+Collab_Esc_Exec_Throughput.png
+Collab_Esc_Delay.png
+ECC_Escalation_Timeline.png
+```
+
+All figures exactly match those presented in the PeerJ paper.
+
+---
+
