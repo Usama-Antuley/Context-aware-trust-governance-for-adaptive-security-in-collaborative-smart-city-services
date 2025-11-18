@@ -485,91 +485,31 @@ This repository implements a **context-aware, trust-based adaptive security gove
 | ECC Tier Escalation|
 | 128 → 192 → 256    |
 +--------------------+
-🔑 Adaptive ECC Key Tiers
-Risk Level	ECC Curve	Use Case
-Low Risk	ECC-128	Normal conditions
-Medium Risk	ECC-192	Moderate deviation
-High Risk / Low Trust	ECC-256	Heavy rain, low trust, anomalies
-📊 Trust & Risk Model (From Paper)
-Component	Formula	Key Parameters
-Historical Trust	T_Hist = Σ (δ^((t-tj)/Δt) * s_tj) / Σ (δ^((t-tj)/Δt))	δ=0.9, Δt=24h
-Reputation Trust	T_Rept = Σ (c_j * f_j) / Σ c_j	c_j = peer credibility
-Contextual Trust	T_Ctx = min(0.7 × (M_rain^0.6 × M_temp^0.4), 1)	M_rain, M_temp ∈ [0,1]
-Overall Trust	T_Overall = w1*T_Hist + w2*T_Rept + w3*T_Ctx	Dynamic weights based on R
-Risk Score	R = (R_Env + R_Service)/2	R_Env: temp & rain deviation
-Dynamic Weights	w1=0.5-0.2R, w2=0.3+0.1R, w3=1-w1-w2	Risk-adaptive weighting
-⚙️ Enforcement Policies (Smart Contract)
-Condition	Action
-T_Overall < 0.5	DENY command
-T_Overall < 0.7 OR R > 0.5	Escalate to ECC-256
-`	ΔT_Overall
-Rain Forecast > 30 mm	DELAY fertilization (enforced)
-🚀 Quick Start (Tested on Ubuntu 22.04)
-Bash
-# 1. Clone repository
-git clone https://github.com/Shahbazdefender/A-Smart-Contract-Based-Adaptive-Security-Governance-Architecture-for-Smart-City-Service.git
-cd A-Smart-Contract-Based-Adaptive-Security-Governance-Architecture-for-Smart-City-Service
+### 🔑 Adaptive ECC Key Tiers
 
-# 2. Start MultiChain Blockchain
-multichaind agri-chain -daemon
+| Risk Level | ECC Curve | Use Case | |-----------------------|-----------|---------------------------------------| | Low Risk | ECC-128 | Normal conditions | | Medium Risk | ECC-192 | Moderate environmental deviation | | High Risk / Low Trust | ECC-256 | Heavy rain, low trust, anomalies |
 
-# 3. Generate 183+ ECC Keys (61 per tier)
-bash generate_keys.sh
+### 📊 Trust & Risk Model (From Paper)
 
-# 4. Deploy Smart Policies
-python deploy_contracts.py
+| Component | Formula | Key Parameters | |-----------------------|------------------------------------------------------------------------------|-----------------------------------------| | Historical Trust | T_Hist = Σ (δ^((t-tj)/Δt) × s_tj) / Σ (δ^((t-tj)/Δt)) | δ = 0.9, Δt = 24h | | Reputation Trust | T_Rept = Σ (c_j × f_j) / Σ c_j | c_j = peer credibility | | Contextual Trust | T_Ctx = min(0.7 × (M_rain^0.6 × M_temp^0.4), 1) | M_rain, M_temp ∈ [0,1] | | Overall Trust | T_Overall = w1×T_Hist + w2×T_Rept + w3×T_Ctx | Dynamic weights based on R | | Risk Score | R = (R_Env + R_Service)/2 | R_Env: temp & rain deviation | | Dynamic Weights | w1 = 0.5 - 0.2R
+w2 = 0.3 + 0.1R
+w3 = 1 - w1 - w2 | Risk-adaptive weighting |
 
-# 5. Launch Cooja Simulation (Contiki-NG)
-make TARGET=cooja agriculture.csc
+### ⚙️ Enforcement Policies (Smart Contract Logic)
 
-# 6. Simulate High-Risk Scenario (Heavy Rain + High Temp)
-python simulate_rain.py --rain 45 --temp 39
-→ Watch ECC escalate to 256-bit and fertilization delayed automatically
+| Condition | Action | |----------------------------------------|--------------------------------------| | `T_Overall < 0.5` | **DENY** command | | `T_Overall < 0.7` OR `R > 0.5` | Escalate to **ECC-256** | | `\|ΔT_Overall\| > 0.3` in 5 minutes | **REVOKE** session | | Rain Forecast > 30 mm | **DELAY** fertilization (enforced) |
 
-📁 Project Structure
-text
-├── Keys/                    # ECC-128/192/256 keys (generated)
-├── trust_engine.py          # Full trust & risk computation
-├── deploy_contracts.py      # Publish policies to MultiChain
-├── generate_keys.sh         # Multi-tier key generation
-├── simulate_rain.py         # High-risk scenario injector
-├── AbstractMote.java        # SD-IoT Controller (Cooja)
-├── agriculture.csc          # Cooja simulation file
-├── ServiceSecurity.json     # Trust metadata
-└── README.md
-⚡ Performance Results (Paper Section 8)
-Metric	Value
-Peak Throughput	18.40 req/sec
-Latency (ECC-128)	Baseline
-Latency Increase (ECC-256)	+1.6 ms
-Trust-Risk Correlation	r = -0.92 (contextual) r = -0.76 (overall)
-🔮 Future Work
-ML-based anomaly detection for R_Service
-Autonomous fertilizer scheduling contract
-Real-world deployment in Sindh farmland (Pakistan)
-Migration to Hyperledger Fabric (global chain)
-Authors & Contact
-Lead Developer & Corresponding Authors Usama Antuley & Shahbaz Siddiqui 📧 usama.fareed.1993@gmail.com , shahbazdefender@gmail.com
+### 🚀 Quick Start (Tested on Ubuntu 22.04+)
 
-📍 Karachi, Pakistan
+```bash # 1. Clone repository git clone https://github.com/Shahbazdefender/A-Smart-Contract-Based-Adaptive-Security-Governance-Architecture-for-Smart-City-Service.git cd A-Smart-Contract-Based-Adaptive-Security-Governance-Architecture-for-Smart-City-Service
 
-📜 License
-This project is licensed under the MIT License - see the LICENSE file for details.
+# 2. Start MultiChain Blockchain multichaind agri-chain -daemon
 
-Protecting Crops with Context-Aware Blockchain Security From Simulation to Sindh Farmland — One Trust Score at a Time 🌱🔒⛓️
+# 3. Generate 183+ ECC Keys (61 per tier) bash generate_keys.sh
 
-text
-### Final Steps:
-1. Save this as `README.md` in your repo root
-2. Add a `LICENSE` file (MIT)
-3. (Optional) Add a banner image named `banner.png` and insert at top:
-   ```markdown
-   <p align="center">
-     <img src="banner.png" width="100%">
-   </p>
-Your repository will now look world-class academic + industrial grade — perfect for citations, funding proposals, and real deployments.
+# 4. Deploy Smart Policies python deploy_contracts.py
 
-Let me know if you want the deploy_contracts.py, trust_engine.py, or Cooja .csc files next! 🚀
+# 5. Launch Cooja Simulation (Contiki-NG) make TARGET=cooja agriculture.csc
 
-text
-This README is optimized for GitHub rendering, SEO, and academic visibility. It will stand out among all IoT-blockchain repositories in 2025
+# 6. Simulate High-Risk Scenario (Heavy Rain + High Temp) python simulate_rain.py --rain 45 --temp 39
+
