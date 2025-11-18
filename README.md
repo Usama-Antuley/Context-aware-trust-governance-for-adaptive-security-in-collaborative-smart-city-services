@@ -487,17 +487,18 @@ This repository implements a **context-aware, trust-based adaptive security gove
 +--------------------+
 ### 🔑 Adaptive ECC Key Tiers
 
-| Risk Level | ECC Curve | Use Case | |-----------------------|-----------|---------------------------------------| | Low Risk | ECC-128 | Normal conditions | | Medium Risk | ECC-192 | Moderate environmental deviation | | High Risk / Low Trust | ECC-256 | Heavy rain, low trust, anomalies |
+### 🔑 Adaptive ECC Key Tiers
+
+| Risk Level | ECC Curve | Use Case | |-----------------------|-----------|--------------------------------------------| | Low Risk | ECC-128 | Normal conditions | | Medium Risk | ECC-192 | Moderate environmental deviation | | High Risk / Low Trust | ECC-256 | Heavy rain, low trust, anomalies |
 
 ### 📊 Trust & Risk Model (From Paper)
 
-| Component | Formula | Key Parameters | |-----------------------|------------------------------------------------------------------------------|-----------------------------------------| | Historical Trust | T_Hist = Σ (δ^((t-tj)/Δt) × s_tj) / Σ (δ^((t-tj)/Δt)) | δ = 0.9, Δt = 24h | | Reputation Trust | T_Rept = Σ (c_j × f_j) / Σ c_j | c_j = peer credibility | | Contextual Trust | T_Ctx = min(0.7 × (M_rain^0.6 × M_temp^0.4), 1) | M_rain, M_temp ∈ [0,1] | | Overall Trust | T_Overall = w1×T_Hist + w2×T_Rept + w3×T_Ctx | Dynamic weights based on R | | Risk Score | R = (R_Env + R_Service)/2 | R_Env: temp & rain deviation | | Dynamic Weights | w1 = 0.5 - 0.2R
-w2 = 0.3 + 0.1R
-w3 = 1 - w1 - w2 | Risk-adaptive weighting |
+| Component | Mathematical Formula | Key Parameters | |-----------------------|---------------------------------------------------------------------------------------------------------------|-----------------------------------------------------| | **Historical Trust** | $$T_{\text{Hist}}(t) = \frac{\sum \delta^{(t - t_j)/\Delta t} \cdot s_{t_j}}{\sum \delta^{(t - t_j)/\Delta t}}$$ | $$\delta = 0.9$$, $$\Delta t = 24\,\text{h}$$ | | **Reputation Trust** | $$T_{\text{Rept}}(t) = \frac{\sum c_j \cdot f_j}{\sum c_j}$$ | $$c_j$$ = peer credibility, $$f_j \in [0,1]$$ | | **Contextual Trust** | $$T_{\text{Ctx}}(t) = \min\!\left(0.7 \times (M_{\text{rain}}^{0.6} \times M_{\text{temp}}^{0.4}), 1\right)$$ | $$M_{\text{rain}} = 1 - \frac{\text{rain}}{50}$$ (if rain < 50 else 0)
+$$M_{\text{temp}} = 1 - \frac{|T-28|}{10}$$ (if \|T-28\| < 10 else 0) | | **Overall Trust** | $$T_{\text{Overall}} = w_1 T_{\text{Hist}} + w_2 T_{\text{Rept}} + w_3 T_{\text{Ctx}}$$ | Dynamic weights based on risk $$R$$ | | **Risk Score** | $$R = \frac{R_{\text{Env}} + R_{\text{Service}}}{2}$$ | $$R_{\text{Service}} = 1 - T_{\text{Hist}}$$ | | **Dynamic Weights** | $$\begin{aligned} w_1 &= 0.5 - 0.2R \\ w_2 &= 0.3 + 0.1R \\ w_3 &= 1 - w_1 - w_2 \end{aligned}$$ | Risk-adaptive weighting |
 
 ### ⚙️ Enforcement Policies (Smart Contract Logic)
 
-| Condition | Action | |----------------------------------------|--------------------------------------| | `T_Overall < 0.5` | **DENY** command | | `T_Overall < 0.7` OR `R > 0.5` | Escalate to **ECC-256** | | `\|ΔT_Overall\| > 0.3` in 5 minutes | **REVOKE** session | | Rain Forecast > 30 mm | **DELAY** fertilization (enforced) |
+| Condition | Action | |------------------------------------------------|------------------------------------------| | $$T_{\text{Overall}} < 0.5$$ | **DENY** command | | $$T_{\text{Overall}} < 0.7$$ OR $$R > 0.5$$ | Escalate to **ECC-256** | | $$|\Delta T_{\text{Overall}}| > 0.3$$ in 5 min | **REVOKE** session | | Rain Forecast **> 30 mm** | **DELAY** fertilization (enforced) |
 
 ### 🚀 Quick Start (Tested on Ubuntu 22.04+)
 
@@ -512,4 +513,3 @@ w3 = 1 - w1 - w2 | Risk-adaptive weighting |
 # 5. Launch Cooja Simulation (Contiki-NG) make TARGET=cooja agriculture.csc
 
 # 6. Simulate High-Risk Scenario (Heavy Rain + High Temp) python simulate_rain.py --rain 45 --temp 39
-
