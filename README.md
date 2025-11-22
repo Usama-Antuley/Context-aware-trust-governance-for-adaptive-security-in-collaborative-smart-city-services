@@ -1,8 +1,6 @@
 # 🌾 Smart City Trust Framework 2025 - Complete Implementation
 ### Context-Aware Trust & Adaptive Security Governance for Smart Agriculture  
-**PeerJ Computer Science 2025 - Full Production Setup**
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue)](https://www.python.org/downloads/)
 [![MultiChain](https://img.shields.io/badge/MultiChain-2.3.3-orange)](https://www.multichain.com/)
 [![Contiki-NG](https://img.shields.io/badge/Contiki--NG-Latest-green)](https://github.com/contiki-ng/contiki-ng)
@@ -693,20 +691,6 @@ free -h && echo "=== Disk Usage ===" && df -h'
 
 ---
 
-## 📄 Citation
-
-```bibtex
-@article{antuley2025context,
-  title={Context-Aware Trust Governance for Adaptive Security in Collaborative Smart City Services},
-  author={Antuley, Usama and Afnan, Muhammad and Siddiqui, Shahbaz and Hameed, Sufian and Draheim, Dirk and Shah, Syed Attique},
-  journal={PeerJ Computer Science},
-  volume={11},
-  pages={eXXXX},
-  year={2025},
-  publisher={PeerJ Inc.},
-  doi={10.7717/peerj-cs.XXXX}
-}
-```
 
 ## 🆘 Support
 
@@ -716,36 +700,5 @@ free -h && echo "=== Disk Usage ===" && df -h'
 3. **Test APIs**: Run `health_check.py`
 4. **Check issues**: [GitHub Issues Page]
 
-### Emergency Recovery
-```bash
-# Complete system restart
-pkill multichaind
-pkill python3
-sleep 5
 
-# Restart blockchains
-multichaind weather -daemon
-multichaind transport -daemon
-multichaind sf -daemon
-multichaind bank -daemon
 
-# Restart trust framework
-python 18november.py
-```
-
----
-
-## ✅ Final Verification Checklist
-
-- [ ] All 4 blockchain daemons running
-- [ ] Streams created on all blockchains
-- [ ] Services registered successfully
-- [ ] API keys configured properly
-- [ ] Trust framework producing output
-- [ ] Performance benchmarks generating figures
-- [ ] Logs directory populated with data
-- [ ] Health check script running without errors
-
-**System Status**: 🟢 OPERATIONAL
-
-*Last Updated: ${new Date().toLocaleDateString()}*
